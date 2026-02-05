@@ -53,29 +53,31 @@ struct HTTPRequest http_request_constructor(char *request_string)
     char *body = strtok(NULL, "|");
 
     extract_request_line_fields(&request, requested);
+    extract_header_fields(&request, header_fields);
+    extract_body(&request, body);
 
-    //create dictionary to store header fields as key value pairs
-    request.header_fields = dictionary_constructor(compare_string_keys);
-
-    // loop through each line in header_fields and add them to a queue
-    struct Queue headers = queue_constructor();
-
-    char *token = strtok(request_line, "\n");
-    while (token)
-    {
-        headers.push(&headers, token, sizeof(token));
-        token = strtok(NULL, "\n");
-    }
-
-    // get each item in header then split them into key value pair, add them to header_fields dictionary
-    char *header = (char *)headers.peek(&headers);
-    while (header)
-    {
-        char *key = strtok(header, ":");
-        char *value = strtok(NULL, "|");
-        headers.pop(&headers);
-        request.header_fields.insert(&request.header_fields, key, sizeof(*key), value, sizeof(*value));
-    }
+    // //create dictionary to store header fields as key value pairs
+    // request.header_fields = dictionary_constructor(compare_string_keys);
+    //
+    // // loop through each line in header_fields and add them to a queue
+    // struct Queue headers = queue_constructor();
+    //
+    // char *token = strtok(request_line, "\n");
+    // while (token)
+    // {
+    //     headers.push(&headers, token, sizeof(token));
+    //     token = strtok(NULL, "\n");
+    // }
+    //
+    // // get each item in header then split them into key value pair, add them to header_fields dictionary
+    // char *header = (char *)headers.peek(&headers);
+    // while (header)
+    // {
+    //     char *key = strtok(header, ":");
+    //     char *value = strtok(NULL, "|");
+    //     headers.pop(&headers);
+    //     request.header_fields.insert(&request.header_fields, key, sizeof(*key), value, sizeof(*value));
+    // }
 
 
     return request;
@@ -142,6 +144,54 @@ void extract_header_fields(struct HTTPRequest *request, char *header_fields)
     }
     // Destroy the queue.
     queue_destructor(&headers);
+}
+
+// Parses the body according to the content type specified in the header fields.
+void extract_body(struct HTTPRequest *request, char *body)
+{
+    // Check what content type needs to be parsed
+    char *content_type = (char *)request->header_fields.search(&request->header_fields, "Content-Type", sizeof("Content-Type"));
+    if (content_type)
+    {
+        // Initialize the body_fields dictionary.
+        struct Dictionary body_fields = dictionary_constructor(compare_string_keys);
+        if (strcmp(content_type, "application/x-www-form-urlencoded") == 0)
+        {
+            // Collect each key value pair as a set and store them in a queue.
+            struct Queue fields = queue_constructor();
+            char *field = strtok(body, "&");
+            while (field)
+            {
+                fields.push(&fields, field, sizeof(char[strlen(field)]));
+            }
+            // Iterate over the queue to further separate keys from values.
+            field = fields.peek(&fields);
+            while (field)
+            {
+                char *key = strtok(field, "=");
+                char *value = strtok(NULL, "\0");
+                // Remove unnecessary leading white space.
+                if (value[0] == ' ')
+                {
+                    value++;
+                }
+                // Insert the key value pair into the dictionary.
+                body_fields.insert(&body_fields, key, sizeof(char[strlen(key)]), value, sizeof(char[strlen(value)]));
+                // Collect the next item in the queue.
+                fields.pop(&fields);
+                field = fields.peek(&fields);
+            }
+            // Destroy the queue.
+            queue_destructor(&fields);
+        }
+        else
+        {
+            // Save the data as a single key value pair.
+            body_fields.insert(&body_fields, "data", sizeof("data"), body, sizeof(char[strlen(body)]));
+        }
+        // Set the request's body dictionary.
+        request->body = body_fields;
+    }
 }
 
 // split request_line to method, and (uri + http version)
