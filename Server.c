@@ -15,7 +15,7 @@ void error(char *msg)
     exit(1);
 }
 
-struct Server server_constructor(int domain, int service, int protocol, u_long interface, int port, int backlog, void (*launch)(struct Server *server))
+struct Server server_constructor(int domain, int service, int protocol, u_long interface, int port, int backlog)
 {
     struct Server server;
     server.domain = domain;
@@ -45,7 +45,6 @@ struct Server server_constructor(int domain, int service, int protocol, u_long i
     if ((listen(server.socket, server.backlog)) == -1)
         error("Failed to listen socket...");
 
-    server.launch = launch;
 
     return server;
 }
