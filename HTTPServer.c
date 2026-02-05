@@ -30,6 +30,7 @@ struct HTTPServer http_server_constructor()
     server.server = server_constructor(AF_INET, SOCK_STREAM, 0, INADDR_ANY, 8080, 255);
     server.routes = dictionary_constructor(compare_string_keys);
     server.register_routes = register_routes;
+    server.launch = launch;
     return server;
 }
 
