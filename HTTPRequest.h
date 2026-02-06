@@ -5,7 +5,11 @@
 #ifndef C_HTTPREQUEST_H
 #define C_HTTPREQUEST_H
 
+#include "../Systems.h"
 #include "../DataStructures/Dictionary/Dictionary.h"
+#include "DataStructures/Dictionary/Dictionary.h"
+#include "../DataStructures.h"
+#include "DataStructures/Dictionary/Dictionary.h"
 
 enum HTTPMethod
 {

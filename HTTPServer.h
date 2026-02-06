@@ -7,6 +7,10 @@
 
 #include "Server.h"
 #include "HTTPRequest.h"
+#include "../DataStructures.h"
+#include "../Systems.h"
+#include "../DataStructures/Dictionary/Dictionary.h"
+
 
 struct HTTPServer
 {
@@ -20,6 +24,5 @@ struct HTTPServer
 };
 
 struct HTTPServer http_server_constructor();
-
-
+char *render_template(int num_templates, ...);
 #endif //C_HTTPSERVER_H

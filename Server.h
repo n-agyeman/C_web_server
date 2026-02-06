@@ -7,6 +7,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "DataStructures/Dictionary/Dictionary.h"
+#include "./../DataStructures.h"
+#include "./../Systems.h"
 
 struct Server
 {

@@ -10,6 +10,8 @@
 #include <Systems.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <stdio.h>
+
 
 void * handler(void *arg);
 void launch(struct HTTPServer *server);
@@ -26,11 +28,17 @@ struct ClientServer
 
 struct HTTPServer http_server_constructor()
 {
+    printf("Entered constructor\n");
     struct HTTPServer server;
+    printf("Instantiated server\n");
     server.server = server_constructor(AF_INET, SOCK_STREAM, 0, INADDR_ANY, 8080, 255);
+    printf("used server constructor\n");
     server.routes = dictionary_constructor(compare_string_keys);
+    printf("attached server routes\n");
     server.register_routes = register_routes;
+    printf("registered server routes\n");
     server.launch = launch;
+    printf("launched server\n");
     return server;
 }
 
@@ -43,7 +51,10 @@ void register_routes(struct HTTPServer *server, char * (*route_function)(struct 
     {
         route.methods[i] = va_arg(methods, int);
     }
-    strcpy(route.uri, uri);
+    va_end(methods);
+    // allocate and copy uri
+    route.uri = strdup(uri);
+    //strcpy(route.uri, uri);
     route.route_function = route_function;
     server->routes.insert(&server->routes, uri, sizeof(char[strlen(uri)]), &route, sizeof(route));
 }
@@ -75,4 +86,30 @@ void * handler(void *arg)
     write(client_server->client, response, sizeof(char[strlen(response)]));
     free(client_server);
     return NULL;
+}
+
+// Joins the contents of multiple files into one.
+char *render_template(int num_templates, ...)
+{
+    // Create a buffer to store the data in.
+    char *buffer = malloc(30000);
+    int buffer_position = 0;
+    char c;
+    FILE *file;
+    // Iterate over the files given as arguments.
+    va_list files;
+    va_start(files, num_templates);
+    // Read the contents of each file into the buffer.
+    for (int i = 0; i < num_templates; i++)
+    {
+        char *path = va_arg(files, char*);
+        file = fopen(path, "r");
+        while ((c = fgetc(file)) != EOF)
+        {
+            buffer[buffer_position] = c;
+            buffer_position += 1;
+        }
+    }
+    va_end(files);
+    return buffer;
 }
