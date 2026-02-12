@@ -33,7 +33,7 @@ struct HTTPRequest
 
 struct HTTPRequest http_request_constructor(char *request_string);
 
-void extract_request_line_fields(struct HTTPRequest *request, char *request_line);
+void extract_request_line_fields(struct HTTPRequest *request, const char *request_line);
 void extract_body(struct HTTPRequest *request, char *body);
 void extract_header_fields(struct HTTPRequest *request, char *header_fields);
 

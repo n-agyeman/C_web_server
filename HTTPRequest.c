@@ -4,6 +4,7 @@
 
 #include "HTTPRequest.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -37,7 +38,7 @@ struct HTTPRequest http_request_constructor(char *request_string)
 {
     struct HTTPRequest request;
 
-    char requested[strlen(request_string)];
+    char *requested = strdup(request_string);
     strcpy(requested, request_string); // create a variable to store a copy of request_string since it's stored as a string literal
 
     // replace the line between the header_fields and body with '|' for tokenizatioins
@@ -48,11 +49,11 @@ struct HTTPRequest http_request_constructor(char *request_string)
     }
 
     //separate different sections of the http string into tokens
-    char *request_line = strtok(requested, " \n");
+    char *request_line = strtok(requested, "\n");
     char *header_fields = strtok(NULL, "|");
     char *body = strtok(NULL, "|");
 
-    extract_request_line_fields(&request, requested);
+    extract_request_line_fields(&request, request_line);
     extract_header_fields(&request, header_fields);
     extract_body(&request, body);
 
@@ -84,11 +85,12 @@ struct HTTPRequest http_request_constructor(char *request_string)
 }
 
 // Parses out the request line to retrieve the method, uri, and http version.
-void extract_request_line_fields(struct HTTPRequest *request, char *request_line)
+void extract_request_line_fields(struct HTTPRequest *request, const char *request_line)
 {
+    printf("request line: %s\n", request_line);
     // Copy the string literal into a local instance.
     char fields[strlen(request_line)];
-    strcpy(fields, request_line);
+    strncpy(fields, request_line, sizeof(fields));
     // Separate the string on spaces for each section.
     char *method = strtok(fields, " ");
     char *uri = strtok(NULL, " ");
@@ -96,6 +98,8 @@ void extract_request_line_fields(struct HTTPRequest *request, char *request_line
     // Insert the results into the request object as a dictionary.
     struct Dictionary request_line_dict = dictionary_constructor(compare_string_keys);
     request_line_dict.insert(&request_line_dict, "method", sizeof("method"), method, sizeof(char[strlen(method)]));
+    printf("\nrequest.line.dic method added \n");
+    printf("uri = %s\n", uri);
     request_line_dict.insert(&request_line_dict, "uri", sizeof("uri"), uri, sizeof(char[strlen(uri)]));
     request_line_dict.insert(&request_line_dict, "http_version", sizeof("http_version"), http_version, sizeof(char[strlen(http_version)]));
     // Save the dictionary to the request object.
@@ -110,7 +114,7 @@ void extract_request_line_fields(struct HTTPRequest *request, char *request_line
 void extract_header_fields(struct HTTPRequest *request, char *header_fields)
 {
     // Copy the string literal into a local instance.
-    char fields[strlen(header_fields)];
+    char fields[strlen(header_fields)+1];
     strcpy(fields, header_fields);
     // Save each line of the input into a queue.
     struct Queue headers = queue_constructor();
@@ -136,13 +140,13 @@ void extract_header_fields(struct HTTPRequest *request, char *header_fields)
                 value++;
             }
             // Push the key value pairs into the request's header_fields dictionary.
-            request->header_fields.insert(&request->header_fields, key, sizeof(char[strlen(key)]), value, sizeof(char[strlen(value)]));
+            request->header_fields.insert(&request->header_fields, key, sizeof(char[strlen(key)])+1, value, sizeof(char[strlen(value)])+1);
             // Collect the next field from the queue.
         }
         headers.pop(&headers);
         header = (char *)headers.peek(&headers);
     }
-    // Destroy the queue.
+    // Destroy the queue.+
     queue_destructor(&headers);
 }
 
@@ -187,7 +191,7 @@ void extract_body(struct HTTPRequest *request, char *body)
         else
         {
             // Save the data as a single key value pair.
-            body_fields.insert(&body_fields, "data", sizeof("data"), body, sizeof(char[strlen(body)]));
+            body_fields.insert(&body_fields, "data", sizeof("data"), body, sizeof(char[strlen(body)])+1);
         }
         // Set the request's body dictionary.
         request->body = body_fields;

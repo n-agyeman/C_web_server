@@ -28,17 +28,17 @@ struct ClientServer
 
 struct HTTPServer http_server_constructor()
 {
-    printf("Entered constructor\n");
+    //printf("Entered constructor\n");
     struct HTTPServer server;
-    printf("Instantiated server\n");
+    //printf("Instantiated server\n");
     server.server = server_constructor(AF_INET, SOCK_STREAM, 0, INADDR_ANY, 8080, 255);
-    printf("used server constructor\n");
+    //printf("used server constructor\n");
     server.routes = dictionary_constructor(compare_string_keys);
-    printf("attached server routes\n");
+    //printf("attached server routes\n");
     server.register_routes = register_routes;
-    printf("registered server routes\n");
+    //printf("registered server routes\n");
     server.launch = launch;
-    printf("launched server\n");
+    //printf("launched server\n");
     return server;
 }
 
@@ -61,29 +61,58 @@ void register_routes(struct HTTPServer *server, char * (*route_function)(struct 
 
 void launch(struct HTTPServer *server)
 {
-    struct ThreadPool thread_pool = thread_pool_constructor(8);
+    struct ThreadPool* thread_pool = thread_pool_constructor(8);
     struct sockaddr *sock_addr = (struct sockaddr *)&server->server.address;
     socklen_t address_length = (socklen_t)sizeof(server->server.address);
+    //printf("launch. entering while loop\n");
     while (1)
     {
+        printf("launch.while entered while loop\n");
         struct ClientServer *client_server = malloc(sizeof(struct ClientServer));
+        printf("launch.while created a clientServer\n");
         client_server->client = accept(server->server.socket, sock_addr, &address_length);
+        printf("launch.while accepted request\n");
         client_server->server = server;
+        printf("launch.while assigned server\n");
         struct ThreadJob job = thread_job_constructor(handler, client_server);
-        thread_pool.add_work(&thread_pool, job);
+        printf("launch.while joined thread\n");
+        thread_pool->add_work(thread_pool, job);
     }
+    printf("launch. left while loop");
 }
 
 void * handler(void *arg)
 {
+    printf("handler thread\n");
     struct ClientServer *client_server = (struct ClientServer *)arg;
-    char request_string[30000];
-    read(client_server->client, request_string, 30000);
+    char request_string[500];
+    int bytes = read(client_server->client, request_string, 500-1);
+    if (bytes <= 0)
+    {
+        close(client_server->client);
+        free(client_server);
+        return NULL;
+    }
+    request_string[bytes] = '\0';
+    printf("%s\n",request_string);
     struct HTTPRequest request = http_request_constructor(request_string);
     char *uri = request.request_line.search(&request.request_line, "uri", sizeof("uri"));
     struct Route *route = client_server->server->routes.search(&client_server->server->routes, uri, sizeof(char[strlen(uri)]));
     char *response = route->route_function(client_server->server, &request);
-    write(client_server->client, response, sizeof(char[strlen(response)]));
+
+    //http headers
+    unsigned long len = strlen(response);
+
+    char header[512];
+    sprintf(header,
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: %lu\r\n"
+        "Connection: close\r\n"
+        "\r\n",
+        len);
+    write(client_server->client, header, strlen(header));
+    write(client_server->client, response, len);
     free(client_server);
     return NULL;
 }
